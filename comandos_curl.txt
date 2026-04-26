@@ -1,0 +1,19 @@
+
+=== AULA 1 — CONSULTA DE ENDEREÇO ===
+
+>> ATENÇÃO: SUBSTITUA A URL PELA TEST URL DO SEU WEBHOOK 
+>> Docker local:    http://localhost:5678/webhook-test/consulta-endereco
+>> n8n Cloud:       https://SEU-USUARIO.app.n8n.cloud/webhook-test/consulta-endereco
+
+>> Windows: use CMD (Prompt de Comando), basta digitar CMD na barra de pesquisa do Windows
+
+# 1. Teste com endereço válido
+curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logradouro\": \"Costábile Romano\", \"cidade\": \"Ribeirão Preto\", \"uf\": \"SP\"}"
+
+
+# 2. Teste com endereço inexistente (cai no false do IF)
+curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logradouro\": \"Inexistente Total\", \"cidade\": \"Ribeirão Preto\", \"uf\": \"SP\"}"
+
+
+# 3. Teste com outra cidade
+curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logradouro\": \"Coronel Fernando Ferreira Leite\", \"cidade\": \"Ribeirão Preto\", \"uf\": \"SP\"}"
