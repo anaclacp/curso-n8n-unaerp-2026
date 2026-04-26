@@ -1,0 +1,228 @@
+{
+  "name": "Consulta de Endereço",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consulta-endereco",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4d28b1e4-f3af-4233-9b94-50d9477872cc",
+      "name": "Webhook",
+      "webhookId": "78a7b57a-1a7f-4b0a-ae43-c15ccd25ba26"
+    },
+    {
+      "parameters": {
+        "url": "=https://viacep.com.br/ws/{{ encodeURIComponent($json.body.uf) }}/{{ encodeURIComponent($json.body.cidade) }}/{{ encodeURIComponent($json.body.logradouro) }}/json/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1f4e622b-3a5b-4569-a057-0a50a9550c0f",
+      "name": "HTTP Request",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9dfe6bcc-c1f3-44b8-8b01-6b6cf3a91549",
+              "leftValue": "={{ $json.cep }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8c9c174a-e062-455a-b68c-ccd84581eddd",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d129169-513c-4d80-b55c-8478c40ad268",
+              "name": "cep",
+              "value": "={{ $json.cep }}",
+              "type": "string"
+            },
+            {
+              "id": "a8a6d638-bd81-42af-a17c-d28166de8f1c",
+              "name": "logradouro",
+              "value": "={{ $json.logradouro }}",
+              "type": "string"
+            },
+            {
+              "id": "2332fcbe-f126-45f6-91d3-55390f4e2509",
+              "name": "bairro",
+              "value": "={{ $json.bairro }}",
+              "type": "string"
+            },
+            {
+              "id": "d4168b61-4ac1-4d4c-8bce-38d09daa105c",
+              "name": "uf",
+              "value": "={{ $json.uf }}",
+              "type": "string"
+            },
+            {
+              "id": "ec2427f6-aa09-4321-ac5c-64ffce73e172",
+              "name": "localidade",
+              "value": "={{ $json.localidade }}",
+              "type": "string"
+            },
+            {
+              "id": "11692da6-9711-40bc-9c98-3145d4f87a72",
+              "name": "total_resultados",
+              "value": "={{ $('HTTP Request').all().length }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        -96
+      ],
+      "id": "7c63e10f-377d-4485-a7b6-d08e36581ec2",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        928,
+        0
+      ],
+      "id": "afdddee7-5065-47c9-a179-ef17077508c9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"error\": {\n    \"code\": \"ENDERECO_NAO_ENCONTRADO\",\n    \"message\": \"Nenhum CEP encontrado para os dados informados\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        80
+      ],
+      "id": "b7130ead-5dbd-4d4d-9aff-7d15050c5003",
+      "name": "Edit Fields1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b9c2f1ec-0417-4b32-9d18-f3781c3507f6",
+  "meta": {
+    "instanceId": "463c1cb27aa71888c7b92fe3db820b102f8d1f5ba51da4f7cc04723df0ea1870"
+  },
+  "id": "I2JBkf6DQYpRZglq",
+  "tags": []
+}
