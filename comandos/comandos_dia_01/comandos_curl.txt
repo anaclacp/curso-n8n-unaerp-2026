@@ -96,3 +96,142 @@ curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logr
   "curl não é reconhecido"
   → Use o Prompt de Comando (CMD), não o PowerShell antigo.
     Ou atualize o Windows para a versão mais recente.
+
+
+
+=== Aula 2 ===
+
+=== AULA 2 — VERIFICADOR DE DISPONIBILIDADE ===
+
+>> SUBSTITUA [SUA_URL] PELA TEST URL DO SEU WEBHOOK 
+>> Docker: http://localhost:5678/webhook-test/verificar-produtos
+>> Cloud:  https://SEU-USUARIO.app.n8n.cloud/webhook-test/verificar-produtos
+
+
+# Teste principal
+curl -X POST [SUA_URL] -H "Content-Type: application/json" -d "{\"termo\": \"phone\"}"
+
+# Outros termos pra testar
+curl -X POST [SUA_URL] -H "Content-Type: application/json" -d "{\"termo\": \"laptop\"}"
+
+
+=== URL DO HTTP REQUEST ===
+
+https://dummyjson.com/products/search?q={{ encodeURIComponent($json.body.termo) }}&limit=10
+
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [	
+            {
+              "id": "e08fb362-08ff-4a79-a3fb-f4e79761dccd",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9730224a-87b9-4d7d-b5e2-6a9322ffc19b",
+              "name": "titulo",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef32269b-b32f-40f3-853c-78877e8262aa",
+              "name": "preco",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "482af6c6-f968-4036-bb97-fcca7c515c2b",
+              "name": "estoque",
+              "value": "={{ $json.stock }}",
+              "type": "number"
+            },
+            {
+              "id": "151f4810-3675-4f14-bfbd-3e735fb317bd",
+              "name": "disponivel",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1296,
+        -80
+      ],
+      "id": "9d31561a-a67a-4f47-b991-cf51bdbd5ab5",
+      "name": "Edit Fields"
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "instanceId": "14ba8d1bc021bf8678c0f83e5c69603df13a446e1292a115da9bdaa5b50eca85"
+  }
+}
+
+==== edit fields 2 (falso)
+
+
+{
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e08fb362-08ff-4a79-a3fb-f4e79761dccd",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9730224a-87b9-4d7d-b5e2-6a9322ffc19b",
+              "name": "titulo",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef32269b-b32f-40f3-853c-78877e8262aa",
+              "name": "preco",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "482af6c6-f968-4036-bb97-fcca7c515c2b",
+              "name": "estoque",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "151f4810-3675-4f14-bfbd-3e735fb317bd",
+              "name": "disponivel",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        64
+      ],
+      "id": "01ec64d4-3510-408a-bf55-ebb8f70dc148",
+      "name": "Edit Fields1"
+    }
+  ],
+  "connections": {},
+  "pinData": {},
+  "meta": {
+    "instanceId": "14ba8d1bc021bf8678c0f83e5c69603df13a446e1292a115da9bdaa5b50eca85"
+  }
+}

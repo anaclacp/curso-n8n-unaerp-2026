@@ -1,0 +1,308 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "verificar-produtos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dce7f0f0-0afe-490f-ad06-603451ac8c25",
+      "name": "Webhook",
+      "webhookId": "8c186753-5186-488f-adb5-549102f487fe"
+    },
+    {
+      "parameters": {
+        "url": "=https://dummyjson.com/products/search?q={{ encodeURIComponent($json.body.termo) }}&limit=10",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1535d872-51b8-45cb-9a52-65652e83f66c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "products",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "5a2ea4ed-8664-49d7-a9c1-99df7e73f21e",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "dd76e149-9fba-40f8-bd52-39803a5eb3dd",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "acdb51df-38d6-41ae-b814-5a93f2e8cd22",
+              "leftValue": "={{ $json.stock }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        992,
+        16
+      ],
+      "id": "8382f352-1d60-459d-945b-f66fea4ce1be",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e08fb362-08ff-4a79-a3fb-f4e79761dccd",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9730224a-87b9-4d7d-b5e2-6a9322ffc19b",
+              "name": "titulo",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef32269b-b32f-40f3-853c-78877e8262aa",
+              "name": "preco",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "482af6c6-f968-4036-bb97-fcca7c515c2b",
+              "name": "estoque",
+              "value": "={{ $json.stock }}",
+              "type": "number"
+            },
+            {
+              "id": "151f4810-3675-4f14-bfbd-3e735fb317bd",
+              "name": "disponivel",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "9d31561a-a67a-4f47-b991-cf51bdbd5ab5",
+      "name": "Em estoque"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e08fb362-08ff-4a79-a3fb-f4e79761dccd",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9730224a-87b9-4d7d-b5e2-6a9322ffc19b",
+              "name": "titulo",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef32269b-b32f-40f3-853c-78877e8262aa",
+              "name": "preco",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "482af6c6-f968-4036-bb97-fcca7c515c2b",
+              "name": "estoque",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "151f4810-3675-4f14-bfbd-3e735fb317bd",
+              "name": "disponivel",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        192
+      ],
+      "id": "01ec64d4-3510-408a-bf55-ebb8f70dc148",
+      "name": "Sem Estoque"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        -192
+      ],
+      "id": "3ebcf8c4-e7d9-474b-b5a4-dbc163a5c9c7",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Em estoque",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Estoque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Em estoque": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Estoque": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14ba8d1bc021bf8678c0f83e5c69603df13a446e1292a115da9bdaa5b50eca85"
+  }
+}
