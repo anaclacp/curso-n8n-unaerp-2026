@@ -1,0 +1,101 @@
+### Passo a passo para subir o n8n com Docker
+
+---
+
+## Pré-requisitos
+
+Antes de começar, você vai precisar de:
+- Windows 10/11 atualizado
+- Docker Desktop instalado (veja o Passo 0 abaixo)
+- O arquivo docker-compose.yml (veja o Passo 1)
+
+---
+
+## Passo 0 — Instalar o Docker Desktop (só na primeira vez)
+
+1. Acesse https://www.docker.com/products/docker-desktop e baixe o instalador
+2. Instale normalmente (Next > Next > Finish)
+3. Abra o terminal (Prompt de Comando ou PowerShell) e rode:
+
+    wsl --install
+
+   Isso instala o WSL (subsistema Linux), necessário para o Docker funcionar no Windows.
+
+4. Reinicie o computador se solicitado
+5. Abra o Docker Desktop e aguarde ele iniciar (ícone na barra de tarefas fica verde)
+
+> Se o Docker Desktop já estiver instalado, basta abri-lo antes de continuar.
+
+---
+
+## Passo 1 — Baixar o arquivo docker-compose.yml
+
+Você tem duas opções:
+
+Opção A — Baixar só o arquivo:
+- Acesse o repositório do curso e baixe o arquivo `docker-compose.yml`
+- Salve em uma pasta fácil de encontrar, por exemplo: `C:\Users\SeuNome\Downloads`
+
+Opção B — Clonar o repositório inteiro (recomendado):
+- Com o Git instalado, abra o terminal e rode:
+
+    git clone https://github.com/[repositorio-do-curso]
+
+---
+
+## Passo 2 — Abrir o terminal na pasta correta
+
+1. Abra o terminal (Prompt de Comando, PowerShell ou Git Bash)
+2. Navegue até a pasta onde está o `docker-compose.yml` usando o comando `cd`:
+
+    cd Downloads
+
+   Ou, se clonou o repositório:
+
+    cd curso-n8n-unaerp-2026
+
+> Dica: use o comando `ls` (ou `dir` no Prompt de Comando) para listar os arquivos da pasta
+> e confirmar que o `docker-compose.yml` está lá.
+
+---
+
+## Passo 3 — Subir o container
+
+Com o Docker Desktop aberto e rodando, execute:
+
+    docker compose up -d
+
+O que esse comando faz:
+- `docker compose` — chama o Docker para orquestrar os containers
+- `up` — sobe (inicia) os containers definidos no arquivo
+- `-d` — roda em segundo plano (você pode fechar o terminal)
+
+Aguarde o download das imagens (só acontece na primeira vez). Quando terminar, você verá algo como:
+
+    ✔ Container n8n  Started
+
+---
+
+## Passo 4 — Acessar o n8n
+
+Abra o navegador e acesse:
+
+    http://localhost:5678
+
+Crie seu usuário na primeira vez que acessar.
+
+---
+
+## Comandos úteis
+
+Parar os containers (sem apagar os dados):
+
+    docker compose stop
+
+Parar e remover os containers:
+
+    docker compose down
+
+Ver os logs (útil para identificar erros):
+
+    docker compose logs -f

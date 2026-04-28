@@ -1,0 +1,98 @@
+
+=== AULA 1 — CONSULTA DE ENDEREÇO ===
+
+O que vamos fazer aqui?
+  O n8n tem um nó chamado Webhook que fica "escutando" uma URL.
+  Quando alguém envia dados para essa URL, o fluxo é acionado.
+  O curl é uma ferramenta de terminal que simula esse envio — como se fosse um aplicativo
+  chamando o seu fluxo.
+
+---
+
+## PASSO 1 — Ativar o Webhook no n8n
+
+1. Abra o n8n em: http://localhost:5678  (ou na URL da sua conta cloud)
+2. Abra o fluxo "Consulta de Endereço"
+3. Clique no nó Webhook
+4. Clique em "Execute Workflow" (botão central no canvas)
+   → O n8n agora está esperando uma requisição. Não feche essa tela!
+
+---
+
+## PASSO 2 — Copiar a URL do Webhook
+
+No nó Webhook, copie a "Test URL". Ela será parecida com uma dessas:
+
+  Docker local:  http://localhost:5678/webhook-test/consulta-endereco
+  n8n Cloud:     https://SEU-USUARIO.app.n8n.cloud/webhook-test/consulta-endereco
+
+> A Test URL só funciona enquanto o n8n está "escutando" (Botão de execute workflow ativo).
+
+---
+
+## PASSO 3 — Abrir o terminal no Windows
+
+1. Pressione  Windows + R
+2. Digite  cmd  e pressione Enter
+   (ou pesquise "Prompt de Comando" na barra de pesquisa do Windows)
+
+> O curl já vem instalado no Windows 10 e 11. Não precisa instalar nada.
+
+---
+
+## PASSO 4 — Entendendo o comando curl
+
+Antes de rodar, veja o que cada parte significa:
+
+  curl                          → ferramenta que faz a requisição
+  -X POST                       → tipo da requisição (POST = enviar dados)
+  [SUA_URL]                     → para onde os dados serão enviados (URL do webhook)
+  -H "Content-Type: application/json"  → avisa que os dados estão em formato JSON
+  -d "{...}"                    → os dados que serão enviados (o corpo da requisição)
+
+---
+
+## PASSO 5 — Rodar os comandos de teste
+
+IMPORTANTE: Cole a URL do seu webhook no lugar de [COLE_SUA_URL_AQUI]
+
+---------------------------------------------------------------------
+# Teste 1 — Endereço válido (deve retornar o CEP encontrado)
+---------------------------------------------------------------------
+
+curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logradouro\": \"Costábile Romano\", \"cidade\": \"Ribeirão Preto\", \"uf\": \"SP\"}"
+
+
+---------------------------------------------------------------------
+# Teste 2 — Endereço inexistente (cai no caminho "false" do IF)
+---------------------------------------------------------------------
+
+curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logradouro\": \"Inexistente Total\", \"cidade\": \"Ribeirão Preto\", \"uf\": \"SP\"}"
+
+
+---------------------------------------------------------------------
+# Teste 3 — Outra rua de Ribeirão Preto
+---------------------------------------------------------------------
+
+curl -X POST [COLE_SUA_URL_AQUI] -H "Content-Type: application/json" -d "{\"logradouro\": \"Coronel Fernando Ferreira Leite\", \"cidade\": \"Ribeirão Preto\", \"uf\": \"SP\"}"
+
+---
+
+## O que esperar após rodar?
+
+- No terminal: aparece a resposta do fluxo em JSON
+- No n8n: o fluxo executa e você vê os dados passando por cada nó (bolinhas verdes)
+
+---
+
+## Problemas comuns
+
+  "Failed to connect" ou "Connection refused"
+  → O Docker não está rodando ou o n8n ainda não subiu. Verifique o Docker Desktop.
+
+  Fluxo não dispara no n8n
+  → Você clicou em "Listen for test event"? Ele precisa estar ativo antes de rodar o curl.
+
+  "curl não é reconhecido"
+  → Use o Prompt de Comando (CMD), não o PowerShell antigo.
+    Ou atualize o Windows para a versão mais recente.
