@@ -1,0 +1,868 @@
+{
+  "name": "Assistente Barbearia - WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "barbearia-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "cbc42d46-01ee-49c9-b042-b9a34a672023",
+      "name": "Webhook Evolution API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1664,
+        256
+      ],
+      "webhookId": "barbearia-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrai e normaliza dados da mensagem do Evolution API\nconst body = $input.first().json.body;\n\n// Ignora mensagens enviadas pela própria barbearia (fromMe)\nif (body.data?.key?.fromMe === true) {\n  return [];\n}\n\nconst remoteJid = body.data?.key?.remoteJid || '';\nconst phone = remoteJid.replace('@s.whatsapp.net', '');\n\n// Suporta texto, áudio (transcrição via OpenAI depois) e imagem\nconst message = body.data?.message || {};\nconst text = message.conversation \n  || message.extendedTextMessage?.text \n  || '';\n\nconst pushName = body.data?.pushName || 'Cliente';\nconst messageId = body.data?.key?.id;\nconst instance = body.instance;\n\nif (!text || !phone) {\n  return [];\n}\n\nreturn [{\n  json: {\n    phone,\n    text: text.trim(),\n    pushName,\n    messageId,\n    instance,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "489bb8bf-0bb6-4ad2-a606-34836e30fc04",
+      "name": "Normalizar Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1440,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "collection": "conversations"
+      },
+      "id": "652b8f95-f63c-4676-afea-bdf4516fb27c",
+      "name": "Buscar Histórico (MongoDB)",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.1,
+      "position": [
+        -1232,
+        256
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta o histórico para enviar ao classificador\nconst input = $('Normalizar Input').first().json;\nconst historyDoc = $input.first().json;\n\nconst history = historyDoc?.messages || [];\n\n// Limita às últimas 10 mensagens para economia de tokens\nconst recentHistory = history.slice(-10);\n\nreturn [{\n  json: {\n    ...input,\n    history: recentHistory,\n    historyText: recentHistory\n      .map(m => `${m.role === 'user' ? 'Cliente' : 'Assistente'}: ${m.content}`)\n      .join('\\n')\n  }\n}];"
+      },
+      "id": "8eb25987-73d9-4b57-9afa-d9d9b7708255",
+      "name": "Montar Contexto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1008,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse da resposta do classificador\nconst response = $input.first().json;\nconst content = response.choices[0].message.content;\nconst parsed = JSON.parse(content);\n\nconst contextData = $('Montar Contexto').first().json;\n\nreturn [{\n  json: {\n    ...contextData,\n    intencao: parsed.intencao,\n    confianca: parsed.confianca\n  }\n}];"
+      },
+      "id": "a59d9f02-fbb4-4953-bf97-894d16192b73",
+      "name": "Parse Intenção",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "FAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FAQ"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "AGENDAMENTO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AGENDAMENTO"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intencao }}",
+                    "rightValue": "SAUDACAO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SAUDACAO"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "0aeabd26-ca23-4342-bc31-58ad3f99bab5",
+      "name": "Switch por Intenção",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -176,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse extração e decide próximo passo\nconst response = $input.first().json;\nconst content = response.choices[0].message.content;\nconst extracted = JSON.parse(content);\n\nconst contextData = $('Parse Intenção').first().json;\n\n// Mapeia duração\nconst duracoes = {\n  corte: 40,\n  corte_barba: 60,\n  barba: 30,\n  pezinho: 15,\n  sobrancelha: 15\n};\n\nconst duracao = duracoes[extracted.servico] || 40;\n\nreturn [{\n  json: {\n    ...contextData,\n    booking: extracted,\n    duracaoMin: duracao,\n    completo: extracted.falta && extracted.falta.length === 0 && extracted.acao === 'MARCAR'\n  }\n}];"
+      },
+      "id": "8ffd7373-e5ea-4fa9-aa93-cc4393c83a40",
+      "name": "Parse Booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.completo }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a588e0d2-ccad-4a85-83d7-fdc5631acfb9",
+      "name": "Dados Completos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        960,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "684916da-f1c5-46b8-9726-70eb01a27d08",
+      "name": "Verificar Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1280,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verifica se há conflito de horário\nconst events = $input.all();\nconst booking = $('Parse Booking').first().json.booking;\nconst duracao = $('Parse Booking').first().json.duracaoMin;\n\nconst dataHoraInicio = new Date(`${booking.data}T${booking.hora}:00-03:00`);\nconst dataHoraFim = new Date(dataHoraInicio.getTime() + duracao * 60000);\n\nlet conflito = false;\nfor (const item of events) {\n  if (!item.json.start) continue;\n  const eventStart = new Date(item.json.start.dateTime || item.json.start.date);\n  const eventEnd = new Date(item.json.end.dateTime || item.json.end.date);\n  \n  // Sobreposição\n  if (dataHoraInicio < eventEnd && dataHoraFim > eventStart) {\n    conflito = true;\n    break;\n  }\n}\n\nconst contextData = $('Parse Booking').first().json;\n\nreturn [{\n  json: {\n    ...contextData,\n    conflito,\n    dataHoraInicio: dataHoraInicio.toISOString(),\n    dataHoraFim: dataHoraFim.toISOString()\n  }\n}];"
+      },
+      "id": "c4dc7acf-f225-4874-ab93-334d473eb464",
+      "name": "Checar Conflito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.conflito }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "83bbcbbc-4d7b-42ba-90e7-59296796cf20",
+      "name": "Sem Conflito?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list"
+        },
+        "start": "={{ $json.dataHoraInicio }}",
+        "end": "={{ $json.dataHoraFim }}",
+        "additionalFields": {
+          "description": "=Cliente: {{ $json.booking.nome || $json.pushName }}\\nTelefone: {{ $json.phone }}\\nServiço: {{ $json.booking.servico }}\\nAgendado via WhatsApp",
+          "summary": "={{ $json.booking.servico }} - {{ $json.booking.nome || $json.pushName }}"
+        }
+      },
+      "id": "ea8c45ad-a8e4-41d5-b1b9-b9add892a906",
+      "name": "Criar Evento Calendar",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1936,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gera mensagem de confirmação\nconst booking = $('Parse Booking').first().json.booking;\nconst phone = $('Parse Booking').first().json.phone;\n\nconst servicosNome = {\n  corte: 'Corte',\n  corte_barba: 'Corte + Barba',\n  barba: 'Barba',\n  pezinho: 'Pezinho',\n  sobrancelha: 'Sobrancelha'\n};\n\nconst dataObj = new Date(`${booking.data}T${booking.hora}:00-03:00`);\nconst dataFmt = dataObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });\n\nconst mensagem = `✅ Agendamento confirmado!\\n\\n📅 ${dataFmt}\\n⏰ ${booking.hora}\\n💈 ${servicosNome[booking.servico]}\\n👤 ${booking.nome || 'Cliente'}\\n\\nTe esperamos! Se precisar remarcar, é só me chamar.`;\n\nreturn [{\n  json: {\n    phone,\n    resposta: mensagem\n  }\n}];"
+      },
+      "id": "45128551-74b2-48df-b9d4-48eb04902e0f",
+      "name": "Formatar Confirmação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Conflito - sugere alternativas\nconst booking = $('Checar Conflito').first().json.booking;\nconst phone = $('Checar Conflito').first().json.phone;\n\nconst mensagem = `Ops! O horário de ${booking.hora} no dia ${booking.data} já está ocupado. 😬\\n\\nMe diga outro horário que prefere e eu confiro a disponibilidade!`;\n\nreturn [{\n  json: {\n    phone,\n    resposta: mensagem\n  }\n}];"
+      },
+      "id": "59951cc9-a596-422d-84af-2bb3b4f26235",
+      "name": "Formatar Conflito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Falta info - usa resposta provisória do extrator\nconst booking = $('Parse Booking').first().json.booking;\nconst phone = $('Parse Booking').first().json.phone;\n\nreturn [{\n  json: {\n    phone,\n    resposta: booking.resposta_provisoria || 'Pode me dizer qual serviço, dia e horário você quer?'\n  }\n}];"
+      },
+      "id": "d8db31be-782b-4b63-9cb9-a95e4a9f6cfb",
+      "name": "Pedir Info Faltante",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resposta de saudação\nconst data = $input.first().json;\nconst nome = data.pushName || 'tudo bem';\n\nconst mensagem = `Olá, ${nome}! 💈\\n\\nSou o assistente da Barbearia Estilo. Posso te ajudar com:\\n• Agendamento de horário\\n• Informações de preços e serviços\\n• Horário de funcionamento\\n\\nO que você precisa?`;\n\nreturn [{\n  json: {\n    phone: data.phone,\n    resposta: mensagem\n  }\n}];"
+      },
+      "id": "40691b7b-6aaa-4315-9f3e-b5332ae0b664",
+      "name": "Formatar Saudação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse FAQ response\nconst response = $input.first().json;\nconst content = response.choices[0].message.content;\nconst contextData = $('Parse Intenção').first().json;\n\nreturn [{\n  json: {\n    phone: contextData.phone,\n    resposta: content\n  }\n}];"
+      },
+      "id": "7838b289-b101-4285-847f-4c362837db87",
+      "name": "Parse FAQ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fallback para intenção OUTRO\nconst data = $('Parse Intenção').first().json;\n\nreturn [{\n  json: {\n    phone: data.phone,\n    resposta: 'Hmm, não entendi muito bem 🤔. Posso te ajudar com agendamento, preços, serviços ou horário de funcionamento. O que você quer saber?'\n  }\n}];"
+      },
+      "id": "fc76ae3b-b439-4b16-9415-03aba7fe4bf0",
+      "name": "Formatar Fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://evolution-api:8080/message/sendText/{{ $('Normalizar Input').first().json.instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $credentials.evolutionApiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.phone }}\",\n  \"text\": \"{{ $json.resposta }}\"\n}",
+        "options": {}
+      },
+      "id": "ca5cd469-1db8-4f84-98f9-850c244ed14b",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2432,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "collection": "conversations",
+        "updateKey": "phone",
+        "fields": "phone,messages,updatedAt",
+        "options": {}
+      },
+      "id": "b03a3c63-4784-4eb2-adba-abf2ebcd0fa2",
+      "name": "Salvar Histórico",
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.1,
+      "position": [
+        2624,
+        416
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\": \"ok\"}",
+        "options": {}
+      },
+      "id": "6afb435f-c012-4db7-9f43-13a44dc5e28e",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2816,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Histórico recente: {{ $json.historyText }}\nMensagem atual: {{ $json.text }}"
+            },
+            {
+              "role": "system",
+              "content": "=Você é um classificador de intenção para uma barbearia. Analise a mensagem do cliente e retorne JSON com a intenção. Categorias possíveis:\\n- FAQ: perguntas sobre preços, serviços, horários de funcionamento, localização\\n- AGENDAMENTO: cliente quer marcar, remarcar ou cancelar horário\\n- SAUDACAO: oi, olá, bom dia, primeira mensagem sem intenção clara\\n- OUTRO: qualquer coisa fora do escopo\\n\\nRetorne apenas: {\\\"intencao\\\": \\\"FAQ|AGENDAMENTO|SAUDACAO|OUTRO\\\", \\\"confianca\\\": 0.0-1.0}\n\n   "
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -784,
+        256
+      ],
+      "id": "2741c346-2ebb-4e2a-9b37-3cfa9abde9f6",
+      "name": "Verifica Intenção",
+      "credentials": {
+        "openAiApi": {
+          "id": "6fsRfI5QtQCWInOe",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Histórico:\\n{{ $json.historyText }}\\n\\nPergunta: {{ $json.text }}"
+            },
+            {
+              "role": "system",
+              "content": "Você é o assistente da Barbearia Estilo. Responda em português brasileiro, tom amigável e direto. Use no máximo 3 linhas.\\n\\nINFORMAÇÕES DA BARBEARIA:\\n- Horário: Terça a Sábado, 9h às 19h. Domingo e Segunda fechado.\\n- Endereço: Rua das Palmeiras, 123 - Centro\\n- Serviços e preços:\\n  • Corte masculino: R$ 45 (40min)\\n  • Corte + barba: R$ 75 (1h)\\n  • Barba: R$ 35 (30min)\\n  • Pezinho: R$ 15 (15min)\\n  • Sobrancelha: R$ 20 (15min)\\n- Formas de pagamento: dinheiro, Pix, cartão\\n- Aceitamos crianças a partir de 5 anos\\n\\nSe o cliente quiser agendar, oriente que basta dizer 'quero agendar' que você ajuda no processo."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        48
+      ],
+      "id": "82689298-54c2-4b27-a385-fcf5eb052eae",
+      "name": "Handler FAQ",
+      "credentials": {
+        "openAiApi": {
+          "id": "6fsRfI5QtQCWInOe",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Nome do cliente no WhatsApp: {{ $json.pushName }}\nHistórico:{{ $json.historyText }}\nMensagem atual: {{ $json.text }}\"\n"
+            },
+            {
+              "role": "system",
+              "content": "Você é um extrator de dados de agendamento para uma barbearia. Analise a conversa e extraia em JSON:\\n\\n{\\n  \\\"acao\\\": \\\"MARCAR|REMARCAR|CANCELAR|CONSULTAR|INCOMPLETO\\\",\\n  \\\"servico\\\": \\\"corte|corte_barba|barba|pezinho|sobrancelha|null\\\",\\n  \\\"data\\\": \\\"YYYY-MM-DD ou null\\\",\\n  \\\"hora\\\": \\\"HH:MM ou null\\\",\\n  \\\"nome\\\": \\\"nome do cliente ou null\\\",\\n  \\\"falta\\\": [\\\"campos\\\", \\\"que\\\", \\\"faltam\\\"],\\n  \\\"resposta_provisoria\\\": \\\"o que perguntar ao cliente para coletar o que falta, em tom amigável\\\"\\n}\\n\\nDuração dos serviços: corte=40min, corte_barba=60min, barba=30min, pezinho=15min, sobrancelha=15min.\\nHorário de funcionamento: Terça a Sábado, 9h às 19h.\\nData de hoje: {{ $now.format('yyyy-MM-dd') }} ({{ $now.format('cccc') }}).\\n\\nSe cliente disse 'amanhã', 'sexta', 'semana que vem', resolva para data absoluta.\\nSe falta algum dado, ponha em 'falta' e formule 'resposta_provisoria'.\\nSe todos os dados estão presentes para MARCAR, deixe 'falta' vazio.\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        256
+      ],
+      "id": "b6f24839-1bf2-44be-9d1a-82348b66fa47",
+      "name": "Extrair Dados Agendamento1",
+      "credentials": {
+        "openAiApi": {
+          "id": "6fsRfI5QtQCWInOe",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Primeiro Contato",
+        "height": 272,
+        "width": 992
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1472,
+        176
+      ],
+      "typeVersion": 1,
+      "id": "899c7937-28d4-4bf2-94ac-1b8011de55f5",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Evolution API": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Input": {
+      "main": [
+        [
+          {
+            "node": "Buscar Histórico (MongoDB)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Histórico (MongoDB)": {
+      "main": [
+        [
+          {
+            "node": "Montar Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar Contexto": {
+      "main": [
+        [
+          {
+            "node": "Verifica Intenção",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Intenção": {
+      "main": [
+        [
+          {
+            "node": "Switch por Intenção",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch por Intenção": {
+      "main": [
+        [
+          {
+            "node": "Handler FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extrair Dados Agendamento1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Saudação",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse FAQ": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Booking": {
+      "main": [
+        [
+          {
+            "node": "Dados Completos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dados Completos?": {
+      "main": [
+        [
+          {
+            "node": "Verificar Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pedir Info Faltante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Calendar": {
+      "main": [
+        [
+          {
+            "node": "Checar Conflito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Checar Conflito": {
+      "main": [
+        [
+          {
+            "node": "Sem Conflito?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Conflito?": {
+      "main": [
+        [
+          {
+            "node": "Criar Evento Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar Conflito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Evento Calendar": {
+      "main": [
+        [
+          {
+            "node": "Formatar Confirmação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Confirmação": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Conflito": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedir Info Faltante": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Saudação": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Fallback": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Salvar Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Histórico": {
+      "main": [
+        [
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifica Intenção": {
+      "main": [
+        [
+          {
+            "node": "Parse Intenção",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handler FAQ": {
+      "main": [
+        [
+          {
+            "node": "Parse FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados Agendamento1": {
+      "main": [
+        [
+          {
+            "node": "Parse Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1848ed13-2735-4ab1-bec2-939e6c079879",
+  "meta": {
+    "instanceId": "14ba8d1bc021bf8678c0f83e5c69603df13a446e1292a115da9bdaa5b50eca85"
+  },
+  "id": "aE3Aos4Jek2FOvkP",
+  "tags": []
+}

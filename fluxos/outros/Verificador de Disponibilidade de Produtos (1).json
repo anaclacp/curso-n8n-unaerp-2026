@@ -1,0 +1,616 @@
+{
+  "name": "Verificador de Disponibilidade de Produtos",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "verificar-produtos",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "dce7f0f0-0afe-490f-ad06-603451ac8c25",
+      "name": "Webhook",
+      "webhookId": "8c186753-5186-488f-adb5-549102f487fe"
+    },
+    {
+      "parameters": {
+        "url": "=https://dummyjson.com/products/search?q={{ encodeURIComponent($json.body.termo) }}&limit=10",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1535d872-51b8-45cb-9a52-65652e83f66c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "products",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "5a2ea4ed-8664-49d7-a9c1-99df7e73f21e",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "dd76e149-9fba-40f8-bd52-39803a5eb3dd",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "acdb51df-38d6-41ae-b814-5a93f2e8cd22",
+              "leftValue": "={{ $json.stock }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1360,
+        16
+      ],
+      "id": "8382f352-1d60-459d-945b-f66fea4ce1be",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e08fb362-08ff-4a79-a3fb-f4e79761dccd",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9730224a-87b9-4d7d-b5e2-6a9322ffc19b",
+              "name": "titulo",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef32269b-b32f-40f3-853c-78877e8262aa",
+              "name": "preco",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "482af6c6-f968-4036-bb97-fcca7c515c2b",
+              "name": "estoque",
+              "value": "={{ $json.stock }}",
+              "type": "number"
+            },
+            {
+              "id": "151f4810-3675-4f14-bfbd-3e735fb317bd",
+              "name": "disponivel",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "91363d88-d202-4b27-98cb-3c255f760021",
+              "name": "comentario",
+              "value": "={{ $json.reviews[0].comment }}",
+              "type": "string"
+            },
+            {
+              "id": "318c130b-8b6a-4a72-94bf-d1ba0d5622b7",
+              "name": "descricao",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "9d31561a-a67a-4f47-b991-cf51bdbd5ab5",
+      "name": "Em estoque"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e08fb362-08ff-4a79-a3fb-f4e79761dccd",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "9730224a-87b9-4d7d-b5e2-6a9322ffc19b",
+              "name": "titulo",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef32269b-b32f-40f3-853c-78877e8262aa",
+              "name": "preco",
+              "value": "={{ $json.price }}",
+              "type": "number"
+            },
+            {
+              "id": "482af6c6-f968-4036-bb97-fcca7c515c2b",
+              "name": "estoque",
+              "value": "=0",
+              "type": "number"
+            },
+            {
+              "id": "151f4810-3675-4f14-bfbd-3e735fb317bd",
+              "name": "disponivel",
+              "value": false,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1696,
+        192
+      ],
+      "id": "01ec64d4-3510-408a-bf55-ebb8f70dc148",
+      "name": "Sem Estoque"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2496,
+        -480
+      ],
+      "id": "3ebcf8c4-e7d9-474b-b5a4-dbc163a5c9c7",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "inputText": "=Analyze the sentiment of this product comment. Classify it as Positive, Neutral, or Negative.\n\n{{ JSON.stringify($json, null, 2) }}",
+        "options": {
+          "categories": "Positive, Neutral, Negative"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.sentimentAnalysis",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        -352
+      ],
+      "id": "2de06cae-b46b-4dde-b314-4a62b40dde07",
+      "name": "Sentiment Analysis"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -144
+      ],
+      "id": "21bf3139-c0de-479b-8aa4-3d183563c434",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "tLQgx8XO2ZvCWKPB",
+          "name": "Groq account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4f2269ac-bdb2-4622-81bc-f0001ba751bd",
+              "name": "titulo",
+              "value": "={{ $json.titulo }}",
+              "type": "string"
+            },
+            {
+              "id": "35391e08-1a91-488a-9645-6f55687b0c39",
+              "name": "preco",
+              "value": "={{ $json.preco }}",
+              "type": "number"
+            },
+            {
+              "id": "d684d09a-c780-4eac-893f-4fdbc1371e2a",
+              "name": "comentario",
+              "value": "={{ $json.comentario }}",
+              "type": "string"
+            },
+            {
+              "id": "7acb14bc-aa80-45fa-b37b-d75bdafae5e6",
+              "name": "estoque",
+              "value": "={{ $json.estoque }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        -336
+      ],
+      "id": "002778b5-be0a-4de3-a9d3-b9291caf89b1",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49804b0e-4acc-44bd-8220-c697fcf244d7",
+              "leftValue": "={{ $json.sentimentAnalysis }}",
+              "rightValue": "Positive",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "36a771a4-633e-45b5-a01a-451edf62d883",
+              "leftValue": "={{ $('Edit Fields').item.json.estoque }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        -560
+      ],
+      "id": "e4efb474-3db8-476d-b765-4640d22e77d8",
+      "name": "Positivo com Estoque"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2f32cd1e-df6f-452a-be71-ef7d629df9bb",
+              "name": "sentimentAnalysis",
+              "value": "={{ $json.sentimentAnalysis.category }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        -384
+      ],
+      "id": "db48ccea-7fd7-421b-9c7b-ed72a24d34ac",
+      "name": "Sentimento Negativo"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49804b0e-4acc-44bd-8220-c697fcf244d7",
+              "leftValue": "={{ $json.sentimentAnalysis }}",
+              "rightValue": "Negative",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "3f88ac28-f123-4e42-a15c-2d769526d397",
+              "leftValue": "={{ $('Edit Fields').item.json.estoque }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        -384
+      ],
+      "id": "1cc422c7-6b05-49ea-97fc-4b5366332ba2",
+      "name": "Negativo"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2f32cd1e-df6f-452a-be71-ef7d629df9bb",
+              "name": "sentimentAnalysis",
+              "value": "={{ $json.sentimentAnalysis.category }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        -560
+      ],
+      "id": "397322ca-1ab6-46e9-afb0-4c59641816ba",
+      "name": "Sentimento Positivo"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Em estoque",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Estoque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Em estoque": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Estoque": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Sentimento Positivo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sentimento Positivo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sentimento Negativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positivo com Estoque": {
+      "main": [
+        []
+      ]
+    },
+    "Sentimento Negativo": {
+      "main": [
+        [
+          {
+            "node": "Negativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Negativo": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Sentimento Positivo": {
+      "main": [
+        [
+          {
+            "node": "Positivo com Estoque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d543a5f6-3f5a-46bf-92f6-48fd37d2830f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14ba8d1bc021bf8678c0f83e5c69603df13a446e1292a115da9bdaa5b50eca85"
+  },
+  "id": "8iFmKEdHID1JhFKC",
+  "tags": []
+}

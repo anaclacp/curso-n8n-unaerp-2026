@@ -1,0 +1,372 @@
+{
+  "name": "Atendimento ao Cliente com IA",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-001",
+              "name": "cliente",
+              "value": "={{ $json.body.nome }}",
+              "type": "string"
+            },
+            {
+              "id": "field-002",
+              "name": "mensagem",
+              "value": "={{ $json.body.mensagem }}",
+              "type": "string"
+            },
+            {
+              "id": "field-003",
+              "name": "telefone",
+              "value": "={{ $json.body.telefone }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0f004431-f11c-4353-8c4f-6fa607527f02",
+      "name": "Extrair Dados",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -576,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-004",
+              "name": "resposta_completa",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "field-005",
+              "name": "resposta",
+              "value": "={{ $json.choices[0].message.content.split('|')[0].replace('RESPOSTA:', '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "field-006",
+              "name": "categoria",
+              "value": "={{ $json.choices[0].message.content.split('|')[1].replace('CATEGORIA:', '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "field-007",
+              "name": "escalar",
+              "value": "={{ $json.choices[0].message.content.split('|')[2].replace('ESCALAR:', '').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "52fa6033-98fc-42d7-9daa-f2dbda436b16",
+      "name": "Processar Resposta da IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-001",
+              "leftValue": "={{ $json.escalar }}",
+              "rightValue": "SIM",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8eb95eb9-9008-47ff-8547-8fc830df7427",
+      "name": "Precisa Escalar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        256,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"resposta\": $json.resposta, \"categoria\": $json.categoria, \"atendido_por\": \"IA\" } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "af4377f8-0060-4ec3-8ea3-bd5bdca3d783",
+      "name": "Resposta Automática",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-008",
+              "name": "assunto_email",
+              "value": "=🚨 Atendimento para escalonamento — {{ $json.categoria }} | Cliente: {{ $('Extrair Dados').item.json.cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "field-009",
+              "name": "corpo_email",
+              "value": "=Cliente: {{ $('Extrair Dados').item.json.cliente }}\nTelefone: {{ $('Extrair Dados').item.json.telefone }}\nCategoria: {{ $json.categoria }}\n\nMensagem original:\n{{ $('Extrair Dados').item.json.mensagem }}\n\nResposta enviada pela IA:\n{{ $json.resposta }}\n\nAção necessária: Este atendimento precisa de intervenção humana.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "71d9ab17-4f7a-4cf4-8550-366d0226dc96",
+      "name": "Preparar Escalonamento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        736,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "suporte@techflow.com",
+        "subject": "={{ $json.assunto_email }}",
+        "emailType": "text",
+        "message": "={{ $json.corpo_email }}",
+        "options": {}
+      },
+      "id": "b29132a1-f9bc-4a32-8c83-2d0c1095592c",
+      "name": "Gmail — Notifica Time",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        160
+      ],
+      "webhookId": "01ea2791-5c0f-49d6-8a7c-48d196455f27"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"resposta\": $('Processar Resposta da IA').item.json.resposta, \"categoria\": $('Processar Resposta da IA').item.json.categoria, \"atendido_por\": \"IA + Humano em breve\" } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "db0a88e2-43dc-42d9-8156-c74243b4c43b",
+      "name": "Resposta + Aviso de Escalonamento",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Você é um assistente de atendimento ao cliente da empresa X. Responda em português, de forma cordial e objetiva. Após responder, classifique o assunto em uma dessas categorias: SUPORTE_TECNICO, FINANCEIRO, COMERCIAL, RECLAMACAO ou OUTROS. Se o cliente estiver muito insatisfeito ou o problema for complexo, adicione ESCALAR_HUMANO ao final da resposta. Formato da resposta: RESPOSTA: [sua resposta] | CATEGORIA: [categoria] | ESCALAR: [SIM ou NAO]\n\nCliente: {{ $json.cliente }} \nMensagem: {{ $json.mensagem }}\"\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        176
+      ],
+      "id": "4eba2cb0-9259-4c17-817b-1b468a490de2",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "6fsRfI5QtQCWInOe",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        176
+      ],
+      "id": "a00a8555-d95e-4169-9488-f45f0e020131",
+      "name": "WhatsApp Trigger",
+      "webhookId": "a39c2ea2-8b05-4599-af7d-7b7f74859d40"
+    },
+    {
+      "parameters": {
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        160
+      ],
+      "id": "8a13c7ca-6a54-4000-9f10-56a9ed6b2fe0",
+      "name": "Create a task"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extrair Dados": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Resposta da IA": {
+      "main": [
+        [
+          {
+            "node": "Precisa Escalar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Precisa Escalar?": {
+      "main": [
+        [
+          {
+            "node": "Resposta + Aviso de Escalonamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resposta Automática",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta + Aviso de Escalonamento": {
+      "main": [
+        [
+          {
+            "node": "Preparar Escalonamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Escalonamento": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Notifica Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail — Notifica Time": {
+      "main": [
+        [
+          {
+            "node": "Create a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Processar Resposta da IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extrair Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a task": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "001446ac-f5fe-423b-a48d-d31e485cf457",
+  "meta": {
+    "instanceId": "14ba8d1bc021bf8678c0f83e5c69603df13a446e1292a115da9bdaa5b50eca85"
+  },
+  "id": "GvDkJF7erlBwESQG",
+  "tags": []
+}
